@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -22,12 +23,6 @@ namespace NumericKeyPad
     /// </summary>
     public partial class UserControl1 : UserControl
     {
-        /// <summary>
-        /// 导入模拟键盘的方法
-        /// </summary>
-        /// <param name="bVk" >按键的虚拟键值</param>
-        /// <param name= "bScan" >扫描码，一般不用设置，用0代替就行</param>
-        /// <param name= "dwFlags" >选项标志：0：表示按下，2：表示松开</param>
         /// <param name= "dwExtraInfo">一般设置为0</param>
         [DllImport("User32.dll")]
         public static extern void keybd_event(byte bVK, byte bScan, Int32 dwFlags, int dwExtraInfo);
@@ -38,7 +33,7 @@ namespace NumericKeyPad
         }
         private void ButtonGrid_Click(object sender, RoutedEventArgs e)
         {
-            Button clickedButton = (Button)e.OriginalSource;    //获取click事件触发源，即按了的按钮
+            Button clickedButton = (Button)e.OriginalSource;   
             string code = (String)clickedButton.Content;
             if (keys.ContainsKey(code))
             {
@@ -51,12 +46,149 @@ namespace NumericKeyPad
                 {
                     Console.WriteLine(ex.Message);
                 }
+                return;
+            }
+            if (code == "+/-")
+            {
+                ModifyNum();
+                return;
+            }
+
+            if (code== "Settings")
+            {
+                SettingDialog dialog = new SettingDialog();
+                dialog.Show();
             }
         }
+
+
+        [Flags]
+        internal enum SendMessageTimeoutFlags : uint
+        {
+            SMTO_NORMAL = 0x0,
+            SMTO_BLOCK = 0x1,
+            SMTO_ABORTIFHUNG = 0x2,
+            SMTO_NOTIMEOUTIFNOTHUNG = 0x8,
+            SMTO_ERRORONEXIT = 0x20
+        }
+
+        // Specific import for WM_GETTEXTLENGTH
+        [DllImport("user32.dll", EntryPoint = "SendMessageTimeout", CharSet = CharSet.Auto)]
+        internal static extern int SendMessageTimeout(
+            IntPtr hwnd,
+            uint Msg,              // Use WM_GETTEXTLENGTH
+            int wParam,
+            int lParam,
+            SendMessageTimeoutFlags flags,
+            uint uTimeout,
+            out int lpdwResult);
+
+        // Specific import for WM_GETTEXT
+        [DllImport("user32.dll", EntryPoint = "SendMessageTimeout", SetLastError = true, CharSet = CharSet.Auto)]
+        internal static extern uint SendMessageTimeoutText(
+            IntPtr hWnd,
+            uint Msg,              // Use WM_GETTEXT
+            int countOfChars,
+            StringBuilder text,
+            SendMessageTimeoutFlags flags,
+            uint uTImeoutj,
+            out IntPtr result);
+
+        [DllImport("user32")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool EnumChildWindows(IntPtr window, EnumWindowProc callback, IntPtr i);
+
+        // callback to enumerate child windows
+        private delegate bool EnumWindowProc(IntPtr hwnd, IntPtr parameter);
+
+        private static bool EnumChildWindowsCallback(IntPtr handle, IntPtr pointer)
+        {
+            // this method will be called foreach child window
+            // create a GCHandle from pointer
+            var gcHandle = GCHandle.FromIntPtr(pointer);
+
+            // cast pointer as list
+            var list = gcHandle.Target as List<IntPtr>;
+
+            if (list == null)
+                throw new InvalidCastException("Invalid cast of GCHandle as List<IntPtr>");
+
+            // Adds the handle to the list.
+            list.Add(handle);
+
+            return true;
+        }
+
+        private static IEnumerable<IntPtr> GetChildWindows(IntPtr parent)
+        {
+            // Create list to store child window handles.
+            var result = new List<IntPtr>();
+
+            // Allocate list handle to pass to EnumChildWindows.
+            var listHandle = GCHandle.Alloc(result);
+
+            try
+            {
+                // enumerates though the children
+                EnumChildWindows(parent, EnumChildWindowsCallback, GCHandle.ToIntPtr(listHandle));
+            }
+            finally
+            {
+                // free unmanaged list handle
+                if (listHandle.IsAllocated)
+                    listHandle.Free();
+            }
+
+            return result;
+        }
+
+        internal static string GetText(IntPtr hwnd)
+        {
+            const uint WM_GETTEXTLENGTH = 0x000E;
+            const uint WM_GETTEXT = 0x000D;
+            int length;
+            IntPtr p;
+
+            var result = SendMessageTimeout(hwnd, WM_GETTEXTLENGTH, 0, 0, SendMessageTimeoutFlags.SMTO_ABORTIFHUNG, 5, out length);
+
+            if (result != 1 || length <= 0)
+                return string.Empty;
+
+            var sb = new StringBuilder(length + 1);
+
+            return SendMessageTimeoutText(hwnd, WM_GETTEXT, sb.Capacity, sb, SendMessageTimeoutFlags.SMTO_ABORTIFHUNG, 5, out p) != 0 ?
+                    sb.ToString() :
+                    string.Empty;
+        }
+
+        public static void ModifyNum()
+        {
+            Process p = Process.GetCurrentProcess();
+            Console.WriteLine(GetText(p.MainWindowHandle));    // main window handle of form, returns "Form1"
+            Console.WriteLine(GetText(new IntPtr(0x70BA0)));   // actual textbox handle, used Winspector, returns "quertz"
+
+            // iterate through dynamic handles of children
+            foreach (var hwnd in GetChildWindows(p.MainWindowHandle))
+            {
+                double rtn_double = 0.0;
+                if (double.TryParse(GetText(hwnd), out rtn_double) == true)
+                {
+                    keybd_event(36, 0, 0, 0);
+                    if (rtn_double > 0)
+                    {
+                        keybd_event(109, 0, 0, 0);
+                    }
+                    else
+                    {
+                        keybd_event(46, 0, 0, 0);
+                    }
+                    return;
+                }
+            }
+
+        }
+
         private Dictionary<string, byte> keys;
-        /// <summary>
-        /// 创建键-值对
-        /// </summary>
         private void CreateKeys()
         {
             keys = new Dictionary<string, byte>()
