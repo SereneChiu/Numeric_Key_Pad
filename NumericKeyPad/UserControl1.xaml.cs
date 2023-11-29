@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
@@ -31,6 +32,7 @@ namespace NumericKeyPad
             InitializeComponent();
             CreateKeys();
         }
+
         private void ButtonGrid_Click(object sender, RoutedEventArgs e)
         {
             Button clickedButton = (Button)e.OriginalSource;   
@@ -50,14 +52,48 @@ namespace NumericKeyPad
             }
             if (code == "+/-")
             {
-                ModifyNum();
+                //ModifyNum();
+
+                keybd_event(VK_LCONTROL, 0, KEYEVENTF_KEYDOWN, 0);
+                keybd_event(A, 0, KEYEVENTF_KEYDOWN, 0);
+                keybd_event(A, 0, KEYEVENTF_KEYUP, 0);
+                keybd_event(VK_LCONTROL, 0, KEYEVENTF_KEYUP, 0);
+
+                keybd_event(VK_LCONTROL, 0, KEYEVENTF_KEYDOWN, 0);
+                keybd_event(C, 0, KEYEVENTF_KEYDOWN, 0);
+                keybd_event(C, 0, KEYEVENTF_KEYUP, 0);
+                keybd_event(VK_LCONTROL, 0, KEYEVENTF_KEYUP, 0);
+                Thread.Sleep(200);
+
+                if (Clipboard.GetText() == null) { return; }
+
+                double rtn_value = 0.0;
+                if (false == double.TryParse(Convert.ToString(Clipboard.GetText()), out rtn_value))
+                {
+                    return;
+                }
+
+                keybd_event(36, 0, 0, 0);
+                Thread.Sleep(100);
+
+                if (rtn_value > 0)
+                {
+                    keybd_event(109, 0, 0, 0);
+                }
+                else
+                {
+                    keybd_event(46, 0, 0, 0);
+                }
+
                 return;
             }
 
-            if (code== "Settings")
+            if (code== "SEL")
             {
-                SettingDialog dialog = new SettingDialog();
-                dialog.Show();
+                keybd_event(VK_LCONTROL, 0, KEYEVENTF_KEYDOWN, 0);
+                keybd_event(A, 0, KEYEVENTF_KEYDOWN, 0);
+                keybd_event(A, 0, KEYEVENTF_KEYUP, 0);
+                keybd_event(VK_LCONTROL, 0, KEYEVENTF_KEYUP, 0);
             }
         }
 
@@ -94,9 +130,35 @@ namespace NumericKeyPad
             uint uTImeoutj,
             out IntPtr result);
 
+        [DllImport("user32.dll", EntryPoint = "SendMessageW")]
+        public static extern int SendMessageW([InAttribute] System.IntPtr hWnd, int Msg, int wParam, IntPtr lParam);
+
+        [DllImport("user32.dll")]
+        static extern IntPtr GetForegroundWindow();
+
         [DllImport("user32")]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool EnumChildWindows(IntPtr window, EnumWindowProc callback, IntPtr i);
+
+        [DllImport("user32.dll")]
+        static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, ExactSpelling = true)]
+        internal static extern IntPtr GetFocus();
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
+        internal static extern int GetWindowThreadProcessId(int handle, out int processId);
+
+        [DllImport("user32", CharSet = CharSet.Ansi, SetLastError = true, ExactSpelling = true)]
+        internal static extern int AttachThreadInput(int idAttach, int idAttachTo, bool fAttach);
+        [DllImport("kernel32.dll")]
+        internal static extern int GetCurrentThreadId();
+
+        [DllImport("user32.dll", EntryPoint = "WindowFromPoint", CharSet = CharSet.Auto, ExactSpelling = true)]
+        public static extern IntPtr WindowFromPoint(Point pt);
+
+       
+
 
         // callback to enumerate child windows
         private delegate bool EnumWindowProc(IntPtr hwnd, IntPtr parameter);
@@ -163,12 +225,10 @@ namespace NumericKeyPad
 
         public static void ModifyNum()
         {
-            Process p = Process.GetCurrentProcess();
-            Console.WriteLine(GetText(p.MainWindowHandle));    // main window handle of form, returns "Form1"
-            Console.WriteLine(GetText(new IntPtr(0x70BA0)));   // actual textbox handle, used Winspector, returns "quertz"
+            IntPtr handle = GetForegroundWindow();
 
             // iterate through dynamic handles of children
-            foreach (var hwnd in GetChildWindows(p.MainWindowHandle))
+            foreach (var hwnd in GetChildWindows(handle))
             {
                 double rtn_double = 0.0;
                 if (double.TryParse(GetText(hwnd), out rtn_double) == true)
@@ -187,6 +247,53 @@ namespace NumericKeyPad
             }
 
         }
+
+        public const int KEYEVENTF_KEYDOWN = 0x0000; // New definition
+        public const int KEYEVENTF_EXTENDEDKEY = 0x0001; //Key down flag
+        public const int KEYEVENTF_KEYUP = 0x0002; //Key up flag
+        public const int VK_LCONTROL = 0xA2; //Left Control key code
+        public const int A = 0x41; //A key code
+        public const int C = 0x43; //C key code
+        public static void ModifyNum_new()
+        {
+            
+        }
+
+        private static string GetTextFromFocusedControl()
+        {
+            try
+            {
+                IntPtr handle = GetForegroundWindow();
+
+                int activeWinPtr = GetForegroundWindow().ToInt32();
+                int activeThreadId = 0, processId;
+                activeThreadId = GetWindowThreadProcessId(activeWinPtr, out processId);
+                int currentThreadId = GetCurrentThreadId();
+                if (activeThreadId != currentThreadId)
+                {
+                    AttachThreadInput(currentThreadId, activeThreadId, true);
+                }
+
+                IntPtr activeCtrlId = GetFocus();
+
+                return GetText_new(activeCtrlId);
+            }
+            catch (Exception exp)
+            {
+                return exp.Message;
+            }
+        }
+
+        private static string GetText_new(IntPtr handle)
+        {
+            int maxLength = 100;
+            IntPtr buffer = Marshal.AllocHGlobal((maxLength + 1) * 2);
+            SendMessageW(handle, 0x000D, maxLength, buffer);
+            string w = Marshal.PtrToStringUni(buffer);
+            Marshal.FreeHGlobal(buffer);
+            return w;
+        }
+
 
         private Dictionary<string, byte> keys;
         private void CreateKeys()

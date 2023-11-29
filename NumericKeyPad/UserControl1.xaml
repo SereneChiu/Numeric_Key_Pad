@@ -12,7 +12,7 @@
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="{x:Type Button}">
-                        <Border x:Name="border" BorderBrush="#FF474747" BorderThickness="1" CornerRadius="5" Margin="5">
+                        <Border x:Name="border" BorderBrush="#FF474747" BorderThickness="1" CornerRadius="40" Margin="5">
                             <Border.Background>
                                 <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
                                     <!--<GradientStop Color="#FFCCCCCC" Offset="1"/>-->
@@ -62,13 +62,11 @@
         <Button x:Name="btn8" Content="8" Grid.Row="1" Grid.Column="1" Style="{StaticResource btnNum}"/>
         <Button x:Name="btn9" Content="9" Grid.Row="1" Grid.Column="2" Style="{StaticResource btnNum}"/>
 
-        <Button x:Name="btnCE" Content="DEL" Grid.Row="0" Grid.Column="0" Style="{StaticResource btnNum}"/>
-        <!--<Button x:Name="btnReduce" Content="+/-" Grid.Row="0" Grid.Column="1" Style="{StaticResource btnNum}"/>-->
-        <Button x:Name="btnA" Content="+" Grid.Row="0" Grid.Column="1" Style="{StaticResource btnNum}"/>
-        <Button x:Name="btnM" Content="-" Grid.Row="0" Grid.Column="2" Style="{StaticResource btnNum}"/>
-        <Button x:Name="btnSet" Content="Settings" Grid.Row="4" Grid.Column="2" Style="{StaticResource btnNum}"/>
-        <Button x:Name="btn0" Content="0" Grid.Row="4" Grid.Column="0"  Style="{StaticResource btnNum}"/>
-        <Button x:Name="btnSpot" Content="." Grid.Row="4" Grid.Column="1"  Style="{StaticResource btnNum}"/>
+        <Button x:Name="btnSel" Content="SEL" Grid.Row="0" Grid.Column="0" Style="{StaticResource btnNum}"/>
+        <Button x:Name="btnDel" Content="DEL" Grid.Row="0" Grid.Column="2" Style="{StaticResource btnNum}"/>
+        <Button x:Name="btnReduce" Content="+/-" Grid.Row="0" Grid.Column="1" Style="{StaticResource btnNum}"/>
+        <Button x:Name="btn0" Content="0" Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2"  Style="{StaticResource btnNum}"/>
+        <Button x:Name="btnSpot" Content="." Grid.Row="4" Grid.Column="2"  Style="{StaticResource btnNum}"/>
     </Grid>
 </UserControl>
     
