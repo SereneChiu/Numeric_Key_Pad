@@ -11,4 +11,10 @@
     <ProjectReference Include="..\NumericKeyPad\NumericKeyPad.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Reference Include="TMcraft">
+      <HintPath>..\..\..\TMcraft\TMcraft.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
 </Project>

@@ -14,6 +14,7 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using NumericKeyPad;
 
 namespace NumericKeyPadApp
 {
@@ -27,20 +28,12 @@ namespace NumericKeyPadApp
 
         [DllImport("user32.dll", SetLastError = true)]
         public static extern UInt32 GetWindowLong(IntPtr hWnd, int index);
-
         public MainWindow()
         {
-            InitializeComponent(); this.Loaded += MainWindow_Loaded;
-        }
-        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
-        {
-            WindowInteropHelper windowInteropHelper = new WindowInteropHelper(this);
-
-            IntPtr intPtr = windowInteropHelper.Handle;
-
-            int value = -20;
-
-            SetWindowLong(intPtr, value, (IntPtr)0x8000000);
+            InitializeComponent();
+            UserControl1 pad = new UserControl1(null);
+            this.Content = pad;
+            this.Topmost = true;
         }
     }
 }

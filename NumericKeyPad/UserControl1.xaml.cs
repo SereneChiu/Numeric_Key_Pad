@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -11,10 +12,13 @@ using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Documents;
 using System.Windows.Input;
+using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
+using System.Xml.Linq;
+using TMcraft;
 
 
 namespace NumericKeyPad
@@ -22,21 +26,95 @@ namespace NumericKeyPad
     /// <summary>
     /// Interaction logic for UserControl1.xaml
     /// </summary>
-    public partial class UserControl1 : UserControl
+    public partial class UserControl1 : UserControl, ITMcraftToolbarEntry
     {
         /// <param name= "dwExtraInfo">一般设置为0</param>
         [DllImport("User32.dll")]
         public static extern void keybd_event(byte bVK, byte bScan, Int32 dwFlags, int dwExtraInfo);
+
+        [DllImport("user32.dll")]
+        public static extern int SetWindowLong(IntPtr hWnd, int nindex, IntPtr dwNewLong);
+
+        [DllImport("user32.dll")]
+        public static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        private TMcraftToolbarAPI mTMcraftToolbarAPI = null;
+        Window mWin = null;
+        Window mWinP = null;
+
         public UserControl1()
         {
             InitializeComponent();
+            this.Loaded += UserControl1_Loaded1;
             CreateKeys();
+        }
+
+        public UserControl1(Window Win, Window WinP = null)
+        {
+            InitializeComponent();
+            this.Loaded += UserControl1_Loaded;
+            CreateKeys();
+            this.mWin = Win;
+            mWinP = WinP;
+        }
+
+
+        private void UserControl1_Loaded1(object sender, RoutedEventArgs e)
+        {
+            if (this.Parent == null) { return; }
+            //if (this.Parent is Window == false) 
+            //{
+            //    MessageBox.Show(((this.Parent as Grid).Parent as ScrollViewer).Parent.ToString());
+            //    return;
+            //}
+
+            mWin = ((this.Parent as Grid).Parent as ScrollViewer).Parent as Window;
+
+            if (mWin == null)
+            {
+                MessageBox.Show("NULL");
+                return;
+            }
+            WindowInteropHelper windowInteropHelper = new WindowInteropHelper(mWin);
+
+            IntPtr intPtr = windowInteropHelper.Handle;
+
+            int value = -20;
+
+            SetWindowLong(intPtr, value, (IntPtr)(0x08000000));
+        }
+
+
+        private void UserControl1_Loaded(object sender, RoutedEventArgs e)
+        {
+            if (mWin == null)
+            {
+                MessageBox.Show("NULL");
+                return;
+            }
+            WindowInteropHelper windowInteropHelper = new WindowInteropHelper(mWin);
+
+            IntPtr intPtr = windowInteropHelper.Handle;
+
+            int value = -20;
+
+            SetWindowLong(intPtr, value, (IntPtr)(0x08000000));
+        }
+        
+        public void InitializeToolbar(TMcraftToolbarAPI Api)
+        {
+            mTMcraftToolbarAPI = Api;
         }
 
         private void ButtonGrid_Click(object sender, RoutedEventArgs e)
         {
             Button clickedButton = (Button)e.OriginalSource;   
             string code = (String)clickedButton.Content;
+            if (mWinP != null)
+            {
+                mWinP.Activate();
+            }
+
             if (keys.ContainsKey(code))
             {
                 byte b = keys[code];
@@ -52,40 +130,40 @@ namespace NumericKeyPad
             }
             if (code == "+/-")
             {
-                //ModifyNum();
+                ModifyNum();
 
-                keybd_event(VK_LCONTROL, 0, KEYEVENTF_KEYDOWN, 0);
-                keybd_event(A, 0, KEYEVENTF_KEYDOWN, 0);
-                keybd_event(A, 0, KEYEVENTF_KEYUP, 0);
-                keybd_event(VK_LCONTROL, 0, KEYEVENTF_KEYUP, 0);
+                //keybd_event(VK_LCONTROL, 0, KEYEVENTF_KEYDOWN, 0);
+                //keybd_event(A, 0, KEYEVENTF_KEYDOWN, 0);
+                //keybd_event(A, 0, KEYEVENTF_KEYUP, 0);
+                //keybd_event(VK_LCONTROL, 0, KEYEVENTF_KEYUP, 0);
 
-                keybd_event(VK_LCONTROL, 0, KEYEVENTF_KEYDOWN, 0);
-                keybd_event(C, 0, KEYEVENTF_KEYDOWN, 0);
-                keybd_event(C, 0, KEYEVENTF_KEYUP, 0);
-                keybd_event(VK_LCONTROL, 0, KEYEVENTF_KEYUP, 0);
-                Thread.Sleep(200);
+                //keybd_event(VK_LCONTROL, 0, KEYEVENTF_KEYDOWN, 0);
+                //keybd_event(C, 0, KEYEVENTF_KEYDOWN, 0);
+                //keybd_event(C, 0, KEYEVENTF_KEYUP, 0);
+                //keybd_event(VK_LCONTROL, 0, KEYEVENTF_KEYUP, 0);
+                //Thread.Sleep(200);
 
-                if (Clipboard.GetText() == null) { return; }
+                //if (Clipboard.GetText() == null) { return; }
 
-                double rtn_value = 0.0;
-                if (false == double.TryParse(Convert.ToString(Clipboard.GetText()), out rtn_value))
-                {
-                    return;
-                }
+                //double rtn_value = 0.0;
+                //if (false == double.TryParse(Convert.ToString(Clipboard.GetText()), out rtn_value))
+                //{
+                //    return;
+                //}
 
-                keybd_event(36, 0, 0, 0);
-                Thread.Sleep(100);
+                //keybd_event(36, 0, 0, 0);
+                //Thread.Sleep(100);
 
-                if (rtn_value > 0)
-                {
-                    keybd_event(109, 0, 0, 0);
-                }
-                else
-                {
-                    keybd_event(46, 0, 0, 0);
-                }
+                //if (rtn_value > 0)
+                //{
+                //    keybd_event(109, 0, 0, 0);
+                //}
+                //else
+                //{
+                //    keybd_event(46, 0, 0, 0);
+                //}
 
-                return;
+                //return;
             }
 
             if (code== "SEL")
@@ -136,6 +214,10 @@ namespace NumericKeyPad
         [DllImport("user32.dll")]
         static extern IntPtr GetForegroundWindow();
 
+        [DllImport("user32.dll")]
+        static extern IntPtr GetLastActivePopup(IntPtr window);
+
+
         [DllImport("user32")]
         [return: MarshalAs(UnmanagedType.Bool)]
         private static extern bool EnumChildWindows(IntPtr window, EnumWindowProc callback, IntPtr i);
@@ -145,6 +227,9 @@ namespace NumericKeyPad
 
         [DllImport("user32.dll", CharSet = CharSet.Auto, ExactSpelling = true)]
         internal static extern IntPtr GetFocus();
+
+        [DllImport("user32.dll", CharSet = CharSet.Auto, ExactSpelling = true)]
+        internal static extern IntPtr SetFocus(IntPtr hWnd);
 
         [DllImport("user32.dll", CharSet = CharSet.Auto, SetLastError = true)]
         internal static extern int GetWindowThreadProcessId(int handle, out int processId);
@@ -225,10 +310,11 @@ namespace NumericKeyPad
 
         public static void ModifyNum()
         {
+            Process[] p_arr = Process.GetProcesses();
             IntPtr handle = GetForegroundWindow();
 
             // iterate through dynamic handles of children
-            foreach (var hwnd in GetChildWindows(handle))
+            foreach (var hwnd in GetChildWindows(Process.GetProcessesByName("notepad")[0].Handle))
             {
                 double rtn_double = 0.0;
                 if (double.TryParse(GetText(hwnd), out rtn_double) == true)
